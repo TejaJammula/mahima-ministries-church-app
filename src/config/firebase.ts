@@ -34,16 +34,17 @@
 //   The app listens for that scheme (see app.json "scheme" + root layout)
 //   and completes sign-in with signInWithEmailLink.
 
-export const FIREBASE_CONFIGURED = false;
+export const FIREBASE_CONFIGURED = true;
 
 export const FIREBASE_CONFIG = {
-  // TODO: paste values from Firebase console → Project Settings → Your apps → Web.
-  apiKey: "TODO",
-  authDomain: "TODO.firebaseapp.com",
-  projectId: "TODO",
-  storageBucket: "TODO.appspot.com",
-  messagingSenderId: "TODO",
-  appId: "TODO",
+  // From Firebase console → Project Settings → Your apps → Web ("church-app").
+  // These are public client keys (they ship inside the app) — safe to commit.
+  apiKey: "AIzaSyC6ivJcjux2LvYOGAaDwfN6rAiC-UsoxBc",
+  authDomain: "mahima-ministries-app.firebaseapp.com",
+  projectId: "mahima-ministries-app",
+  storageBucket: "mahima-ministries-app.firebasestorage.app",
+  messagingSenderId: "1072289031723",
+  appId: "1:1072289031723:web:7b2e6b2859517e54f96c6e",
 };
 
 /** True only when real config values have been pasted in. */
@@ -62,7 +63,7 @@ export function isFirebaseConfigured(): boolean {
  * domain (see DEEP LINK NOTE above). The page forwards to the app scheme.
  */
 export const SIGN_IN_REDIRECT_URL =
-  "https://TODO.pages.dev/finishSignIn"; // TODO: real redirect page URL
+  "https://tejajammula.github.io/mahima-ministries-church-app/finishSignIn.html";
 
 export const APP_SCHEME = "mahimaministries"; // must match app.json "scheme"
 

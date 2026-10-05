@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>Signing you in…</title>
+<script>
+  // Forwards the Firebase email sign-in link into the Mahima Ministries app.
+  var q = new URLSearchParams(location.search);
+  var link = q.get("link") || location.href;
+  location.replace("mahimaministries://auth?link=" + encodeURIComponent(link));
+</script>
+</head>
+<body>
+<p>Signing you in to Mahima Ministries…</p>
+</body>
+</html>
