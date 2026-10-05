@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Mahima Ministries",
+    "slug": "mahima-ministries",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.mahimaministries.churchapp",
+      "infoPlist": {
+        "LSApplicationQueriesSchemes": ["whatsapp"],
+        "NSPhotoLibraryAddUsageDescription": "Mahima Ministries needs access to save verse images and photos to your library."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.mahimaministries.churchapp"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      [
+        "expo-media-library",
+        {
+          "photosPermission": "Mahima Ministries needs access to save verse images and photos to your library.",
+          "savePhotosPermission": "Mahima Ministries needs access to save verse images and photos to your library."
+        }
+      ]
+    ],
+    "scheme": "mahimaministries"
+  }
+}
