@@ -9,10 +9,11 @@ import { Card, Chip, MutedText, SectionTitle } from "../../components/ui";
 import { useAppTheme } from "../../theme/ThemeContext";
 import {
   BIBLE_VERSIONS,
-  BUNDLED_CHAPTER_KEYS,
   chapterLabel,
   getChapter,
+  searchVersion,
   type BibleVersionId,
+  type SearchHit,
 } from "../../data/bible";
 import {
   store,
@@ -23,15 +24,8 @@ import {
 } from "../../storage/store";
 import { JourneyCard, TOTAL_CHAPTERS, type JourneyStats } from "../../components/bible/JourneyCard";
 import { PlanCard } from "../../components/bible/PlanCard";
+import { BookChapterPicker } from "../../components/bible/BookChapterPicker";
 import { ChapterView } from "../../components/bible/ChapterView";
-
-interface SearchHit {
-  version: BibleVersionId;
-  key: string;
-  verse: number;
-  text: string;
-  label: string;
-}
 
 const EMPTY_STATS: JourneyStats = { biblePct: 0, chaptersDone: 0, streakDays: 0, quizAvg: null };
 
@@ -127,23 +121,10 @@ export default function BibleScreen() {
   }, [bookmarks, openKey, version]);
 
   const results = useMemo<SearchHit[]>(() => {
-    const q = query.trim().toLowerCase();
+    const q = query.trim();
     if (q.length < 2) return [];
-    const hits: SearchHit[] = [];
-    for (const key of BUNDLED_CHAPTER_KEYS) {
-      for (const v of BIBLE_VERSIONS) {
-        const ch = getChapter(v.id, key);
-        if (!ch) continue;
-        const label = chapterLabel(ch, v.language);
-        for (const verse of ch.verses) {
-          if (verse.text.toLowerCase().includes(q)) {
-            hits.push({ version: v.id, key, verse: verse.n, text: verse.text, label });
-            if (hits.length >= 30) return hits;
-          }
-        }
-      }
-    }
-    return hits;
+    // Search the whole Bible in both versions (15 hits each).
+    return [...searchVersion("telugu", q, 15), ...searchVersion("english-kjv", q, 15)];
   }, [query]);
 
   if (openKey) {
@@ -198,43 +179,10 @@ export default function BibleScreen() {
             ))}
           </View>
 
-          {/* 4. Chapter picker (bundled subset) */}
-          <SectionTitle style={{ color: colors.text, fontSize: fs(17) }}>Chapters</SectionTitle>
-          {BUNDLED_CHAPTER_KEYS.map((key) => {
-            const ch = getChapter(version, key);
-            if (!ch) return null;
-            const done = chaptersDone.includes(key);
-            return (
-              <Pressable
-                key={key}
-                onPress={() => openChapter(key)}
-                accessibilityRole="button"
-                accessibilityLabel={`Open ${chapterLabel(ch, lang)}`}
-              >
-                <Card style={{ backgroundColor: colors.card, borderColor: done ? colors.gold : colors.border }}>
-                  <View style={{ flexDirection: "row", alignItems: "center" }}>
-                    <View style={{ flex: 1 }}>
-                      <Text style={{ color: colors.text, fontSize: fs(17), fontWeight: "700" }}>
-                        {chapterLabel(ch, lang)}
-                      </Text>
-                      <MutedText style={{ color: colors.textMuted, fontSize: fs(13), marginTop: 2 }}>
-                        {ch.verses.length} verses
-                      </MutedText>
-                    </View>
-                    {done ? (
-                      <Text style={{ color: colors.primary, fontSize: fs(13), fontWeight: "700" }}>✓ Done</Text>
-                    ) : null}
-                    <Text style={{ color: colors.primary, fontSize: fs(20), marginLeft: 8 }}>›</Text>
-                  </View>
-                </Card>
-              </Pressable>
-            );
-          })}
-          <MutedText style={{ color: colors.textMuted, fontSize: fs(13), fontStyle: "italic", marginBottom: 4 }}>
-            Full 66-book text coming soon.
-          </MutedText>
+          {/* 4. Chapter picker — full 66-book Bible */}
+          <BookChapterPicker lang={lang} chaptersDone={chaptersDone} onOpenChapter={openChapter} />
 
-          {/* 5. Search across bundled chapters in both versions */}
+          {/* 5. Search across the whole Bible in both versions */}
           <SectionTitle style={{ color: colors.text, fontSize: fs(17) }}>Search the Bible</SectionTitle>
           <TextInput
             value={query}

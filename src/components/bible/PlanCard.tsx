@@ -1,14 +1,14 @@
 // Reading-plan onboarding card + "Today's portion".
 // - No profile  -> prompt to sign in (mock login route).
 // - Profile, no plan -> duration picker (90/180/365 days) + version choice -> savePlan.
-// - Plan exists -> today's portion (rotates through the bundled chapters by day).
+// - Plan exists -> today's portion (rotates through all 1,189 chapters by day).
 import React, { useState } from "react";
 import { Text, TouchableOpacity, View } from "react-native";
 import { Card, Chip, MutedText, PrimaryButton, SectionTitle } from "../ui";
 import { useAppTheme } from "../../theme/ThemeContext";
 import {
   BIBLE_VERSIONS,
-  BUNDLED_CHAPTER_KEYS,
+  chapterKeyAtIndex,
   chapterLabel,
   getChapter,
   type BibleVersionId,
@@ -17,11 +17,11 @@ import type { Profile, ReadingPlan } from "../../storage/store";
 
 const DURATIONS = [90, 180, 365] as const;
 
-/** Deterministic rotation through the bundled chapters, one per day. */
+/** Deterministic rotation through all 1,189 chapters, one per day. */
 export function todaysChapterKey(d = new Date()): string {
   const start = new Date(d.getFullYear(), 0, 0);
   const dayOfYear = Math.floor((d.getTime() - start.getTime()) / 86400000);
-  return BUNDLED_CHAPTER_KEYS[dayOfYear % BUNDLED_CHAPTER_KEYS.length];
+  return chapterKeyAtIndex(dayOfYear);
 }
 
 interface PlanCardProps {
