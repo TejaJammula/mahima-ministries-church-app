@@ -5,10 +5,11 @@
 // JSON is parsed only the first time it is opened — the whole 14MB is never
 // held in memory at once.
 //
-// IMPORTANT: The Telugu text bundled here is OTSA (Biblica Open Telugu
-// Contemporary Version, CC BY-SA 4.0) as a STAND-IN. Tj ultimately wants a
-// Telugu KJV-tradition text. Do NOT label the Telugu version "KJV" anywhere
-// user-facing until a verified Telugu KJV source is in place.
+// IMPORTANT: The Telugu text bundled here is the Indian Revised Version
+// (IRV) 2019, (c) 2017, 2019 Bridge Connectivity Solutions, used under
+// CC BY-SA 4.0 (https://creativecommons.org/licenses/by-sa/4.0/).
+// Source: eBible.org (tel2017_vpl). Tj chose it as the "best and latest"
+// Telugu text (2026-10-05).
 import {
   BOOK_LIST,
   ENGLISH_BOOKS,
@@ -82,8 +83,8 @@ export function getChapter(version: BibleVersionId, key: string): ChapterData | 
     book: info.name,
     bookTe: info.nameTe,
     chapter,
-    // Verse numbers come from the source text (Telugu OTSA merges a few
-    // verses, e.g. "17-18", which is stored under the range start).
+    // Verse numbers come from the source text (the Telugu IRV merges a few
+    // verses, e.g. DEU 1 has no v4 — numbers are stored as printed).
     verses: verses.map(([n, text]) => ({ n, text })),
   };
 }

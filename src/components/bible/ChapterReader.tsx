@@ -67,7 +67,7 @@ export function ChapterReader({ chapter, version, bookmarkedVerses, onToggleVers
       })}
       {version === "telugu" ? (
         <Text style={{ color: colors.textMuted, fontSize: fs(12), marginTop: 12, fontStyle: "italic" }}>
-          Telugu text shown from the OTSA stand-in edition.
+          తెలుగు: Indian Revised Version 2019 © Bridge Connectivity Solutions (CC BY-SA 4.0)
         </Text>
       ) : null}
     </View>
