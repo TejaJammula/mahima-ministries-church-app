@@ -1,8 +1,12 @@
-// DEMO login screen — MOCK ONLY. The real Gmail OTP goes through Firebase
-// (one step needs Tj's Google account) and comes with the real build.
-// This screen simulates email OTP + name/branch collection so every
-// personalized feature works now.
-import React, { useState } from "react";
+// Sign-in screen — Gmail-based login.
+//
+// Two modes, picked automatically (see src/auth/index.ts):
+//   DEMO (Firebase not configured yet): 6-digit mock code flow.
+//   FIREBASE (config present): real passwordless email-link flow —
+//     enter Gmail → tap "Send sign-in link" → tap the link in the email →
+//     the app opens and completes sign-in → name/branch registration.
+// No SMS, no cost either way.
+import React, { useEffect, useState } from "react";
 import {
   Alert,
   ScrollView,
@@ -14,11 +18,24 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, Stack } from "expo-router";
-import { BRANCHES, DEMO_OTP, completeRegistration, requestOtp, verifyOtp } from "../auth/mock";
+import {
+  BRANCHES,
+  DEMO_OTP,
+  authMode,
+  requestSignIn,
+  verifyDemoCode,
+  completeRegistration,
+  onAuthChanged,
+  getCurrentUid,
+  authErrorMessage,
+} from "../auth";
+import { store } from "../storage/store";
 import { PrimaryButton } from "../components/ui";
 import { useAppTheme } from "../theme/ThemeContext";
 
 type Step = 1 | 2 | 3;
+
+const MODE = authMode();
 
 export default function LoginScreen() {
   const { colors, fs } = useAppTheme();
@@ -30,6 +47,27 @@ export default function LoginScreen() {
   const [branch, setBranch] = useState(BRANCHES[0]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [linkSent, setLinkSent] = useState(false);
+
+  // Firebase mode: the email link may complete sign-in while this screen is
+  // open (member returns from their email app). React to it.
+  useEffect(() => {
+    if (MODE !== "firebase") return;
+    const resolveSignedIn = () => {
+      store.getProfile().then((p) => {
+        if (p) router.back();
+        else setStep(3);
+      });
+    };
+    if (getCurrentUid()) {
+      resolveSignedIn();
+      return;
+    }
+    const unsub = onAuthChanged((uid) => {
+      if (uid) resolveSignedIn();
+    });
+    return unsub;
+  }, []);
 
   const labelStyle = (size = 15): TextStyle => ({
     fontSize: fs(size),
@@ -58,7 +96,7 @@ export default function LoginScreen() {
 
   const isValidEmail = (v: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 
-  const handleSendCode = async () => {
+  const handleSend = async () => {
     if (!isValidEmail(email)) {
       setError("Please enter a valid Gmail address.");
       return;
@@ -66,17 +104,22 @@ export default function LoginScreen() {
     setError("");
     setBusy(true);
     try {
-      await requestOtp(email.trim());
-      setStep(2);
-    } catch {
-      setError("Something went wrong sending the code. Please try again.");
+      await requestSignIn(email.trim());
+      if (MODE === "firebase") {
+        setLinkSent(true);
+        setStep(2);
+      } else {
+        setStep(2);
+      }
+    } catch (e) {
+      setError(authErrorMessage(e));
     } finally {
       setBusy(false);
     }
   };
 
-  const handleVerify = () => {
-    if (verifyOtp(code)) {
+  const handleVerifyDemo = () => {
+    if (verifyDemoCode(code)) {
       setError("");
       setStep(3);
     } else {
@@ -96,8 +139,8 @@ export default function LoginScreen() {
       Alert.alert("Welcome!", `Welcome home, ${firstName.trim()}.`, [
         { text: "Continue", onPress: () => router.back() },
       ]);
-    } catch {
-      setError("Something went wrong saving your profile. Please try again.");
+    } catch (e) {
+      setError(authErrorMessage(e));
     } finally {
       setBusy(false);
     }
@@ -121,16 +164,18 @@ export default function LoginScreen() {
         >
           Sign in
         </Text>
-        <Text
-          style={{
-            fontSize: fs(13),
-            fontWeight: "600",
-            color: colors.primary,
-            marginBottom: 16,
-          }}
-        >
-          DEMO login (mock — real Gmail OTP via Firebase comes later)
-        </Text>
+        {MODE === "demo" ? (
+          <Text
+            style={{
+              fontSize: fs(13),
+              fontWeight: "600",
+              color: colors.primary,
+              marginBottom: 16,
+            }}
+          >
+            DEMO login (mock — real Gmail sign-in via Firebase comes later)
+          </Text>
+        ) : null}
 
         {step === 1 && (
           <>
@@ -147,16 +192,45 @@ export default function LoginScreen() {
               autoFocus
             />
             <Text style={hintStyle}>
-              A one-time code will be sent to your email. (Mock: no real email is sent.)
+              {MODE === "firebase"
+                ? "We'll email you a secure sign-in link. No password needed."
+                : "A one-time code will be sent to your email. (Mock: no real email is sent.)"}
             </Text>
             <PrimaryButton
-              title={busy ? "Sending…" : "Send code"}
-              onPress={busy ? () => {} : handleSendCode}
+              title={busy ? "Sending…" : MODE === "firebase" ? "Send sign-in link" : "Send code"}
+              onPress={busy ? () => {} : handleSend}
             />
           </>
         )}
 
-        {step === 2 && (
+        {step === 2 && MODE === "firebase" && (
+          <>
+            <Text style={labelStyle(17)}>Check your email</Text>
+            <Text style={hintStyle}>
+              We sent a sign-in link to{"\n"}
+              <Text style={{ fontWeight: "700", color: colors.text }}>{email.trim()}</Text>
+              {"\n\n"}Open your email app and tap the link — you&apos;ll come right
+              back here, signed in. The link expires after a while; if it does,
+              just request a new one below.
+            </Text>
+            {linkSent ? (
+              <Text style={{ ...hintStyle, color: colors.primary, fontWeight: "600" }}>
+                Link sent. It may take a minute to arrive.
+              </Text>
+            ) : null}
+            <PrimaryButton
+              title={busy ? "Sending…" : "Resend link"}
+              onPress={busy ? () => {} : handleSend}
+            />
+            <TouchableOpacity onPress={() => setStep(1)} style={{ marginTop: 12 }}>
+              <Text style={{ fontSize: fs(14), color: colors.primary, fontWeight: "600" }}>
+                Use a different email
+              </Text>
+            </TouchableOpacity>
+          </>
+        )}
+
+        {step === 2 && MODE === "demo" && (
           <>
             <Text style={labelStyle()}>Enter the 6-digit code</Text>
             <TextInput
@@ -175,7 +249,7 @@ export default function LoginScreen() {
                 Demo code: {DEMO_OTP}
               </Text>
             </Text>
-            <PrimaryButton title="Verify" onPress={handleVerify} />
+            <PrimaryButton title="Verify" onPress={handleVerifyDemo} />
             <TouchableOpacity onPress={() => setStep(1)} style={{ marginTop: 12 }}>
               <Text style={{ fontSize: fs(14), color: colors.primary, fontWeight: "600" }}>
                 Use a different email

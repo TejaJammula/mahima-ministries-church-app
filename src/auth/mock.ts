@@ -1,32 +1,22 @@
-// MOCK authentication — UI flow only, clearly marked.
-// Real app: Firebase email OTP under Tj's Google account (blocked until the
-// real build walkthrough with him). This module simulates the Gmail OTP
-// login + name/branch collection so every screen that needs a user works now.
-import { store, Profile } from "../storage/store";
+// DEMO auth provider — used only while Firebase is not configured
+// (see src/config/firebase.ts). Mirrors the real provider's interface so the
+// UI never knows the difference. Clearly marked; never ships as "real".
+import { store, type Profile } from "../storage/store";
 
-export const MOCK_MODE = true;
-/** Demo OTP shown in the UI so testers can complete the flow. */
+export const DEMO_MODE = true;
+/** Demo code shown in the UI so testers can complete the flow. */
 export const DEMO_OTP = "123456";
 
-export const BRANCHES = [
-  "Prasadampadu",
-  "Currency Nagar / Ramavarappadu",
-  "Mandadam",
-  "Tangeda Road / Dachepalli",
-  "Hyderabad",
-  "Another Mahima Ministries branch",
-];
-
-export async function requestOtp(_email: string): Promise<void> {
-  // Mock: pretend an OTP email was sent. Real Firebase wiring comes later.
+export async function demoSendSignInLink(_email: string): Promise<void> {
+  // Mock: pretend a sign-in email was sent.
   await new Promise((r) => setTimeout(r, 800));
 }
 
-export function verifyOtp(code: string): boolean {
+export function demoVerifyCode(code: string): boolean {
   return code.trim() === DEMO_OTP;
 }
 
-export async function completeRegistration(
+export async function demoCompleteRegistration(
   email: string,
   firstName: string,
   lastName: string,
@@ -37,6 +27,6 @@ export async function completeRegistration(
   return profile;
 }
 
-export async function signOut(): Promise<void> {
+export async function demoSignOut(): Promise<void> {
   await store.clearProfile();
 }

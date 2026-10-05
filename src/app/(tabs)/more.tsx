@@ -12,7 +12,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { router, useFocusEffect } from "expo-router";
-import { BRANCHES, signOut } from "../../auth/mock";
+import { BRANCHES, signOut } from "../../auth";
 import { store, Profile } from "../../storage/store";
 import { config } from "../../config";
 import { Chip, GoldDivider, PrimaryButton } from "../../components/ui";

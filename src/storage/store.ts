@@ -48,6 +48,42 @@ export interface Settings {
   theme: "light" | "dark" | "system";
 }
 
+/** Everything that syncs to the member's cloud account. */
+export interface ProgressSnapshot {
+  plan: ReadingPlan | null;
+  completions: Record<string, boolean>;
+  chaptersDone: string[];
+  quizScores: Record<string, QuizScore>;
+  streak: { count: number; lastDate: string | null };
+  bookmarks: Bookmark[];
+  readingSeconds: Record<string, number>;
+  settings: Settings;
+}
+
+type ProgressListener = () => void;
+const progressListeners = new Set<ProgressListener>();
+
+/**
+ * Subscribe to local progress changes. The cloud-sync module registers here
+ * so every mutation below triggers a debounced Firestore push.
+ */
+export function onProgressChanged(cb: ProgressListener): () => void {
+  progressListeners.add(cb);
+  return () => {
+    progressListeners.delete(cb);
+  };
+}
+
+function notifyProgressChanged(): void {
+  for (const cb of progressListeners) {
+    try {
+      cb();
+    } catch {
+      // Listener failures must never break local storage.
+    }
+  }
+}
+
 async function get<T>(key: string, fallback: T): Promise<T> {
   try {
     const raw = await AsyncStorage.getItem(key);
@@ -73,7 +109,10 @@ export const store = {
 
   // Reading plan
   getPlan: () => get<ReadingPlan | null>(KEYS.plan, null),
-  savePlan: (p: ReadingPlan) => set(KEYS.plan, p),
+  savePlan: async (p: ReadingPlan) => {
+    await set(KEYS.plan, p);
+    notifyProgressChanged();
+  },
 
   // Daily completions: { "2026-10-05": true }
   getCompletions: () => get<Record<string, boolean>>(KEYS.completions, {}),
@@ -81,6 +120,7 @@ export const store = {
     const c = await get<Record<string, boolean>>(KEYS.completions, {});
     c[date] = true;
     await set(KEYS.completions, c);
+    notifyProgressChanged();
   },
 
   // Chapters finished: ["gen:1", "psa:23"]
@@ -90,6 +130,7 @@ export const store = {
     if (!list.includes(key)) {
       list.push(key);
       await set(KEYS.chaptersDone, list);
+      notifyProgressChanged();
     }
   },
 
@@ -99,6 +140,7 @@ export const store = {
     const s = await get<Record<string, QuizScore>>(KEYS.quizScores, {});
     s[chapterKey] = { score, total, date: todayKey() };
     await set(KEYS.quizScores, s);
+    notifyProgressChanged();
   },
 
   // Streak: { count, lastDate }
@@ -111,6 +153,7 @@ export const store = {
     const isConsecutive = s.lastDate === todayKey(yesterday);
     const next = { count: isConsecutive ? s.count + 1 : 1, lastDate: date };
     await set(KEYS.streak, next);
+    notifyProgressChanged();
     return next;
   },
 
@@ -124,12 +167,16 @@ export const store = {
     if (i >= 0) list.splice(i, 1);
     else list.push(b);
     await set(KEYS.bookmarks, list);
+    notifyProgressChanged();
     return i < 0; // true if now bookmarked
   },
 
   // Settings
   getSettings: () => get<Settings>(KEYS.settings, { textSize: 1, theme: "light" }),
-  saveSettings: (s: Settings) => set(KEYS.settings, s),
+  saveSettings: async (s: Settings) => {
+    await set(KEYS.settings, s);
+    notifyProgressChanged();
+  },
 
   // Reading seconds per day (honest read tracking): { "2026-10-05": 320 }
   getReadingSeconds: () => get<Record<string, number>>(KEYS.readingSeconds, {}),
@@ -137,5 +184,38 @@ export const store = {
     const r = await get<Record<string, number>>(KEYS.readingSeconds, {});
     r[date] = (r[date] || 0) + secs;
     await set(KEYS.readingSeconds, r);
+    notifyProgressChanged();
+  },
+
+  // ---- Firebase sync interface ----
+  // Read/write the whole progress snapshot at once so the cloud adapter
+  // can push/pull without knowing individual keys.
+  loadAll: async (): Promise<ProgressSnapshot> => {
+    const [plan, completions, chaptersDone, quizScores, streak, bookmarks, readingSeconds, settings] =
+      await Promise.all([
+        get<ReadingPlan | null>(KEYS.plan, null),
+        get<Record<string, boolean>>(KEYS.completions, {}),
+        get<string[]>(KEYS.chaptersDone, []),
+        get<Record<string, QuizScore>>(KEYS.quizScores, {}),
+        get<{ count: number; lastDate: string | null }>(KEYS.streak, { count: 0, lastDate: null }),
+        get<Bookmark[]>(KEYS.bookmarks, []),
+        get<Record<string, number>>(KEYS.readingSeconds, {}),
+        get<Settings>(KEYS.settings, { textSize: 1, theme: "light" }),
+      ]);
+    return { plan, completions, chaptersDone, quizScores, streak, bookmarks, readingSeconds, settings };
+  },
+
+  saveAll: async (snap: ProgressSnapshot): Promise<void> => {
+    await Promise.all([
+      set(KEYS.plan, snap.plan),
+      set(KEYS.completions, snap.completions),
+      set(KEYS.chaptersDone, snap.chaptersDone),
+      set(KEYS.quizScores, snap.quizScores),
+      set(KEYS.streak, snap.streak),
+      set(KEYS.bookmarks, snap.bookmarks),
+      set(KEYS.readingSeconds, snap.readingSeconds),
+      set(KEYS.settings, snap.settings),
+    ]);
+    notifyProgressChanged();
   },
 };
