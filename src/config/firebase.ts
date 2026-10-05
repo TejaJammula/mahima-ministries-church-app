@@ -63,7 +63,7 @@ export function isFirebaseConfigured(): boolean {
  * domain (see DEEP LINK NOTE above). The page forwards to the app scheme.
  */
 export const SIGN_IN_REDIRECT_URL =
-  "https://tejajammula.github.io/mahima-ministries-church-app/hosting/finishSignIn.html";
+  "https://tejajammula.github.io/mahima-ministries-signin/";
 
 export const APP_SCHEME = "mahimaministries"; // must match app.json "scheme"
 
